@@ -2,6 +2,7 @@
 using IL.Terraria.GameContent.ItemDropRules;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ID;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.DB;
@@ -24,6 +25,46 @@ namespace ForceClass
             "ranger",
             "summoner",
             "mage",
+        };
+
+        static readonly short[] MinionProjectiles =
+        {
+            ProjectileID.AbigailCounter,
+            ProjectileID.AbigailMinion,
+            ProjectileID.BabyBird,
+            ProjectileID.FlinxMinion,
+            ProjectileID.BabySlime,
+            ProjectileID.VampireFrog,
+            ProjectileID.Hornet,
+            ProjectileID.FlyingImp,
+            ProjectileID.VenomSpider,
+            ProjectileID.JumperSpider,
+            ProjectileID.DangerousSpider,
+            ProjectileID.BatOfLight,
+            ProjectileID.OneEyedPirate,
+            ProjectileID.SoulscourgePirate,
+            ProjectileID.PirateCaptain,
+            ProjectileID.Smolstar,
+            ProjectileID.Retanimini,
+            ProjectileID.Spazmamini,
+            ProjectileID.Pygmy,
+            ProjectileID.Pygmy2,
+            ProjectileID.Pygmy3,
+            ProjectileID.Pygmy4,
+            ProjectileID.StormTigerGem,
+            ProjectileID.StormTigerTier1,
+            ProjectileID.StormTigerTier2,
+            ProjectileID.StormTigerTier3,
+            ProjectileID.DeadlySphere,
+            ProjectileID.Raven,
+            ProjectileID.UFOMinion,
+            ProjectileID.Tempest,
+            ProjectileID.StardustDragon1,
+            ProjectileID.StardustDragon2,
+            ProjectileID.StardustDragon3,
+            ProjectileID.StardustDragon4,
+            ProjectileID.StardustCellMinion,
+            ProjectileID.EmpressBlade,
         };
 
         private readonly Dictionary<string, string> PlayerClasses = new();
@@ -53,16 +94,54 @@ namespace ForceClass
 
         private void OnGetData(GetDataEventArgs args)
         {
+            if (args.Handled)
+                return;
             if (!Config.Enabled)
                 return;
-
-            if (args.MsgID != PacketTypes.NpcStrike)
-                return;
-
             TSPlayer player = TShock.Players[args.Msg.whoAmI];
             if (player == null || !player.Active || !player.IsLoggedIn)
                 return;
 
+            switch (args.MsgID)
+            {
+                case PacketTypes.NpcStrike:
+                    OnNpcStrike(args, player);
+                    break;
+
+                // Prevent minion summon
+                case PacketTypes.ProjectileNew:
+                    if (Config.SameAll && Config.ClassAll == "summoner")
+                        return;
+                    if (PlayerClasses[player.Name] != "summoner")
+                        OnProjectileNew(args, player);
+                    break;
+            }
+        }
+
+        private static void OnProjectileNew(GetDataEventArgs args, TSPlayer player)
+        {
+            using BinaryReader reader = new(
+                new MemoryStream(args.Msg.readBuffer, args.Index, args.Length)
+            );
+
+            var projectileId = reader.ReadInt16();
+            _ = reader.ReadSingle();
+            _ = reader.ReadSingle();
+            _ = reader.ReadSingle();
+            _ = reader.ReadSingle();
+            var ownerId = reader.ReadByte();
+            var type = reader.ReadInt16();
+
+            if (MinionProjectiles.Contains(type))
+            {
+                args.Handled = true;
+                player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
+                // player.SendErrorMessage($"You can't summon a minion!");
+            }
+        }
+
+        private void OnNpcStrike(GetDataEventArgs args, TSPlayer player)
+        {
             // Return if just using non weapon tools
             Item selecteditem = player.SelectedItem;
             if (
@@ -144,12 +223,12 @@ namespace ForceClass
 
             Config newConfig = Config.Load();
             // Set ClassAll to Warrior if typo error
-            if (!classChoices.Contains(newConfig.ClassAll) && Config.SameAll)
+            if (!classChoices.Contains(newConfig.ClassAll) && newConfig.SameAll)
             {
                 TShock.Log.ConsoleWarn(
                     "[ForceClass] There must be a typo in your config at the ClassAll property.\n[ForceClass] Now setting it to WARRIOR temporarily."
                 );
-                Config.ClassAll = "warrior";
+                newConfig.ClassAll = "warrior";
             }
 
             if (Config.Enabled != newConfig.Enabled)
