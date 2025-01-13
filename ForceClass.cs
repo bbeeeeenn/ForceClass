@@ -94,8 +94,6 @@ namespace ForceClass
 
         private void OnGetData(GetDataEventArgs args)
         {
-            if (args.Handled)
-                return;
             if (!Config.Enabled)
                 return;
             TSPlayer player = TShock.Players[args.Msg.whoAmI];
@@ -136,7 +134,6 @@ namespace ForceClass
             {
                 args.Handled = true;
                 player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
-                // player.SendErrorMessage($"You can't summon a minion!");
             }
         }
 
