@@ -317,13 +317,14 @@ namespace ForceClass
 
             if (!Config.Enabled)
             {
-                player.SendInfoMessage("Currently disabled.");
+                player.SendMessage("Currently disabled.", Color.LightCyan);
                 return;
             }
             if (Config.SameAll)
             {
-                player.SendInfoMessage(
-                    $"All players are forced to be a {Config.ClassAll.ToUpper()} class."
+                player.SendMessage(
+                    $"All players are forced to be a {Config.ClassAll.ToUpper()} class.",
+                    Color.LightCyan
                 );
                 return;
             }
