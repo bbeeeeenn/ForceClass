@@ -277,8 +277,6 @@ namespace ForceClass
 
             if (Punish)
             {
-                // Freeze the player
-                player.SetBuff(47, Config.PunishDuration * 60);
                 if (!Config.SameAll && PlayerClasses[player.Name] == "None")
                 {
                     SendMessage(
@@ -291,7 +289,7 @@ namespace ForceClass
                 {
                     SendMessage(
                         player,
-                        $"Please use a valid weapon for {(Config.SameAll ? Config.ClassAll : PlayerClasses[player.Name])}.",
+                        $"Please use a valid weapon for {(Config.SameAll ? Config.ClassAll.ToUpper() : PlayerClasses[player.Name].ToUpper())}.",
                         Color.Red
                     );
                 }
@@ -312,7 +310,9 @@ namespace ForceClass
             }
             if (Config.SameAll)
             {
-                player.SendInfoMessage($"All players are forced to be a {Config.ClassAll} class.");
+                player.SendInfoMessage(
+                    $"All players are forced to be a {Config.ClassAll.ToUpper()} class."
+                );
                 return;
             }
             if (!player.IsLoggedIn)
@@ -353,7 +353,7 @@ namespace ForceClass
                     string currClass = result.Reader.Get<string>("Class");
                     if (currClass != "None")
                     {
-                        player.SendErrorMessage($"You are already a '{currClass.ToUpper()}' class");
+                        player.SendErrorMessage($"You are already a {currClass.ToUpper()} class");
                         return;
                     }
                 }
@@ -393,7 +393,7 @@ namespace ForceClass
 
                 PlayerClasses[player.Name] = classinput;
 
-                player.SendMessage(
+                player.SendSuccessMessage(
                     $"You are now a {classinput.ToUpper()} class!",
                     Color.Aquamarine
                 );
@@ -409,7 +409,8 @@ namespace ForceClass
         {
             if (
                 !LastMessageSent.ContainsKey(player.Name)
-                || (DateTime.Now - LastMessageSent[player.Name]).Seconds >= 2
+                || (DateTime.Now - LastMessageSent[player.Name]).Seconds
+                    >= Config.ErrorMessageInterval
             )
             {
                 LastMessageSent[player.Name] = DateTime.Now;
