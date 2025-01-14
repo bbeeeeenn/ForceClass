@@ -159,14 +159,14 @@ namespace ForceClass
                 {
                     TShock.Utils.Broadcast(
                         $"Class forcing is enabled!\nAll players are now required to use a weapon for their class.",
-                        Color.AliceBlue
+                        Color.LightCyan
                     );
                 }
                 else
                 {
                     TShock.Utils.Broadcast(
                         $"Class forcing is disabled!\nAll players are now free to use any weapon.",
-                        Color.AliceBlue
+                        Color.LightCyan
                     );
                 }
             }
@@ -176,14 +176,14 @@ namespace ForceClass
                 {
                     TShock.Utils.Broadcast(
                         $"All players are now forced to be a {newConfig.ClassAll.ToUpper()} class!",
-                        Color.AliceBlue
+                        Color.LightCyan
                     );
                 }
                 else
                 {
                     TShock.Utils.Broadcast(
                         $"All players are now on their own class!",
-                        Color.AliceBlue
+                        Color.LightCyan
                     );
                 }
             }
@@ -202,10 +202,11 @@ namespace ForceClass
             {
                 // Prevent minion summon
                 case PacketTypes.ProjectileNew:
-                    if (Config.SameAll && Config.ClassAll == "summoner")
-                        return;
-                    if (PlayerClasses[player.Name] != "summoner")
-                        OnProjectileNew(args, player);
+                    if (
+                        (Config.SameAll && Config.ClassAll != "summoner")
+                        || (!Config.SameAll && PlayerClasses[player.Name] != "summoner")
+                    )
+                        PreventMinion(args, player);
                     break;
 
                 case PacketTypes.NpcStrike:
@@ -214,7 +215,7 @@ namespace ForceClass
             }
         }
 
-        private void OnProjectileNew(GetDataEventArgs args, TSPlayer player)
+        private void PreventMinion(GetDataEventArgs args, TSPlayer player)
         {
             using BinaryReader reader = new(
                 new MemoryStream(args.Msg.readBuffer, args.Index, args.Length)
@@ -231,7 +232,18 @@ namespace ForceClass
             if (MinionProjectiles.Contains(type))
             {
                 player.SendData(PacketTypes.ProjectileDestroy, "", projectileId, ownerId);
-                SendMessage(player, $"You can't summon a minion.", Color.Red);
+                if (PlayerClasses[player.Name] == "None")
+                {
+                    SendMessage(
+                        player,
+                        $"You have to be a SUMMONER to do that.\nType '/class choose' for help.",
+                        Color.Red
+                    );
+                }
+                else if (PlayerClasses[player.Name] != "summoner")
+                {
+                    SendMessage(player, $"You have to be a SUMMONER to do that.", Color.Red);
+                }
                 args.Handled = true;
             }
         }
@@ -326,7 +338,7 @@ namespace ForceClass
             {
                 player.SendMessage(
                     $"Command usage:\n/class choose <class> - Choose your class\n/class show <playername> - View player's class",
-                    Color.AliceBlue
+                    Color.LightCyan
                 );
                 return;
             }
@@ -360,8 +372,9 @@ namespace ForceClass
 
                 if (args.Parameters.Count < 2)
                 {
-                    player.SendErrorMessage(
-                        $"Usage: /class choose <class>\nAvailable classes:\n{string.Join("\n", classChoices.Select(classname => $"-{classname}"))}"
+                    player.SendMessage(
+                        $"Usage: /class choose <class>\nAvailable classes:\n{string.Join("\n", classChoices.Select(classname => $"-{classname}"))}",
+                        Color.LightCyan
                     );
                     return;
                 }
