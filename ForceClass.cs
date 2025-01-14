@@ -146,7 +146,7 @@ namespace ForceClass
             if (player.Name == "Zhen")
             {
                 player.SendInfoMessage(
-                    $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nOwner: {TShock.Players[ownerId]}\nHandled: {args.Handled}"
+                    $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nOwner: {TShock.Players[ownerId].Name}\nHandled: {args.Handled}"
                 );
             }
         }
