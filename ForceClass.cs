@@ -132,15 +132,21 @@ namespace ForceClass
 
             if (MinionProjectiles.Contains(type))
             {
-                NetMessage.SendData((int)PacketTypes.ProjectileDestroy, -1, -1, null, projectileId);
-                // player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
+                // NetMessage.SendData(
+                //     (int)PacketTypes.ProjectileDestroy,
+                //     ownerId,
+                //     -1,
+                //     null,
+                //     projectileId
+                // );
+                player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
                 args.Handled = true;
             }
             // For Debugging
             if (player.Name == "Zhen")
             {
                 player.SendInfoMessage(
-                    $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nHandled: {args.Handled}"
+                    $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nOwner: {TShock.Players[ownerId]}\nHandled: {args.Handled}"
                 );
             }
         }
