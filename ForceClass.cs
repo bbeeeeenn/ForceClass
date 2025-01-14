@@ -68,6 +68,7 @@ namespace ForceClass
         };
 
         private readonly Dictionary<string, string> PlayerClasses = new();
+        private readonly Dictionary<string, DateTime> LastMessageSent = new();
 
         public TShockPlugin(Main game)
             : base(game) { }
@@ -116,7 +117,7 @@ namespace ForceClass
             }
         }
 
-        private static void OnProjectileNew(GetDataEventArgs args, TSPlayer player)
+        private void OnProjectileNew(GetDataEventArgs args, TSPlayer player)
         {
             using BinaryReader reader = new(
                 new MemoryStream(args.Msg.readBuffer, args.Index, args.Length)
@@ -133,15 +134,9 @@ namespace ForceClass
             if (MinionProjectiles.Contains(type))
             {
                 player.SendData(PacketTypes.ProjectileDestroy, "", projectileId, ownerId);
+                SendMessage(player, $"You can't summon a minion.", Color.Red);
                 args.Handled = true;
             }
-            // For Debugging
-            // if (player.Name == "Zhen")
-            // {
-            //     player.SendInfoMessage(
-            //         $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nOwner: {TShock.Players[ownerId].Name}\nHandled: {args.Handled}"
-            //     );
-            // }
         }
 
         private void OnNpcStrike(GetDataEventArgs args, TSPlayer player)
@@ -189,14 +184,18 @@ namespace ForceClass
                 player.SetBuff(47, Config.PunishDuration * 60);
                 if (!Config.SameAll && PlayerClasses[player.Name] == "None")
                 {
-                    player.SendErrorMessage(
-                        "Please choose a class first!\nType '/class choose' for help."
+                    SendMessage(
+                        player,
+                        "Please choose a class first!\nType '/class choose' for help.",
+                        Color.Red
                     );
                 }
                 else
                 {
-                    player.SendErrorMessage(
-                        $"Please use a valid weapon for {(Config.SameAll ? Config.ClassAll : PlayerClasses[player.Name])}."
+                    SendMessage(
+                        player,
+                        $"Please use a valid weapon for {(Config.SameAll ? Config.ClassAll : PlayerClasses[player.Name])}.",
+                        Color.Red
                     );
                 }
                 args.Handled = true;
@@ -407,6 +406,18 @@ namespace ForceClass
             else if (args.Parameters[0] == "show")
             {
                 player.SendErrorMessage("Soon to be implemented...");
+            }
+        }
+
+        private void SendMessage(TSPlayer player, string message, Color color)
+        {
+            if (
+                !LastMessageSent.ContainsKey(player.Name)
+                || (DateTime.Now - LastMessageSent[player.Name]).Seconds >= 2
+            )
+            {
+                LastMessageSent[player.Name] = DateTime.Now;
+                player.SendMessage(message, color);
             }
         }
 
