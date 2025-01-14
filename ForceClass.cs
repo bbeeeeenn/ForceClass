@@ -85,12 +85,109 @@ namespace ForceClass
                 Config.ClassAll = "warrior";
             }
 
-            InitializeDB();
+            TShock.DB.Query(
+                @"
+                    CREATE TABLE IF NOT EXISTS PlayerClass (
+                        World INTEGER NOT NULL,
+                        Username TEXT NOT NULL,
+                        Class TEXT DEFAULT None
+                    );
+                "
+            );
 
             ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
-            ServerApi.Hooks.NetGetData.Register(this, OnGetData);
             PlayerHooks.PlayerPostLogin += OnPlayerLogin;
             GeneralHooks.ReloadEvent += OnReload;
+            ServerApi.Hooks.NetGetData.Register(this, OnGetData);
+        }
+
+        private void OnInitialize(EventArgs args)
+        {
+            Commands.ChatCommands.Add(new Command(ChooseClass, "class") { AllowServer = false });
+        }
+
+        private void OnPlayerLogin(PlayerPostLoginEventArgs e)
+        {
+            TSPlayer player = e.Player;
+
+            using QueryResult result = TShock.DB.QueryReader(
+                $@"
+                    SELECT Username, Class FROM PlayerClass
+                    WHERE Username=@0 AND World=@1;
+                ",
+                player.Account.Name,
+                Main.worldID
+            );
+            if (!result.Read())
+            {
+                TShock.DB.Query(
+                    $@"
+                        INSERT INTO PlayerClass (World, Username)
+                        VALUES (@0, @1);
+                    ",
+                    Main.worldID,
+                    player.Account.Name
+                );
+                TShock.Log.ConsoleInfo(
+                    $"[ForceClass] New DB row for {player.Account.Name} created."
+                );
+                PlayerClasses[player.Name] = "None";
+                return;
+            }
+
+            string playerclass = result.Reader.Get<string>("Class");
+            PlayerClasses[player.Name] = playerclass;
+        }
+
+        private void OnReload(ReloadEventArgs e)
+        {
+            TShock.Log.ConsoleInfo("[ForceClass] Config Reloaded.");
+
+            Config newConfig = Config.Load();
+            // Set ClassAll to Warrior if typo error
+            if (!classChoices.Contains(newConfig.ClassAll) && newConfig.SameAll)
+            {
+                TShock.Log.ConsoleWarn(
+                    "[ForceClass] There must be a typo in your config at the ClassAll property.\n[ForceClass] Now setting it to WARRIOR temporarily."
+                );
+                newConfig.ClassAll = "warrior";
+            }
+
+            if (Config.Enabled != newConfig.Enabled)
+            {
+                if (newConfig.Enabled)
+                {
+                    TShock.Utils.Broadcast(
+                        $"Class forcing is enabled!\nAll players are now required to use a weapon for their class.",
+                        Color.AliceBlue
+                    );
+                }
+                else
+                {
+                    TShock.Utils.Broadcast(
+                        $"Class forcing is disabled!\nAll players are now free to use any weapon.",
+                        Color.AliceBlue
+                    );
+                }
+            }
+            if (Config.SameAll != newConfig.SameAll)
+            {
+                if (newConfig.SameAll)
+                {
+                    TShock.Utils.Broadcast(
+                        $"All players are now forced to be a {newConfig.ClassAll.ToUpper()} class!",
+                        Color.AliceBlue
+                    );
+                }
+                else
+                {
+                    TShock.Utils.Broadcast(
+                        $"All players are now on their own class!",
+                        Color.AliceBlue
+                    );
+                }
+            }
+            Config = newConfig;
         }
 
         private void OnGetData(GetDataEventArgs args)
@@ -103,16 +200,16 @@ namespace ForceClass
 
             switch (args.MsgID)
             {
-                case PacketTypes.NpcStrike:
-                    OnNpcStrike(args, player);
-                    break;
-
                 // Prevent minion summon
                 case PacketTypes.ProjectileNew:
                     if (Config.SameAll && Config.ClassAll == "summoner")
                         return;
                     if (PlayerClasses[player.Name] != "summoner")
                         OnProjectileNew(args, player);
+                    break;
+
+                case PacketTypes.NpcStrike:
+                    OnNpcStrike(args, player);
                     break;
             }
         }
@@ -200,108 +297,6 @@ namespace ForceClass
                 }
                 args.Handled = true;
             }
-        }
-
-        private static void InitializeDB()
-        {
-            TShock.DB.Query(
-                @"
-                    CREATE TABLE IF NOT EXISTS PlayerClass (
-                        World INTEGER NOT NULL,
-                        Username TEXT NOT NULL,
-                        Class TEXT DEFAULT None
-                    );
-                "
-            );
-        }
-
-        private void OnInitialize(EventArgs args)
-        {
-            Commands.ChatCommands.Add(new Command(ChooseClass, "class"));
-        }
-
-        private void OnReload(ReloadEventArgs e)
-        {
-            TShock.Log.ConsoleInfo("[ForceClass] Config Reloaded.");
-
-            Config newConfig = Config.Load();
-            // Set ClassAll to Warrior if typo error
-            if (!classChoices.Contains(newConfig.ClassAll) && newConfig.SameAll)
-            {
-                TShock.Log.ConsoleWarn(
-                    "[ForceClass] There must be a typo in your config at the ClassAll property.\n[ForceClass] Now setting it to WARRIOR temporarily."
-                );
-                newConfig.ClassAll = "warrior";
-            }
-
-            if (Config.Enabled != newConfig.Enabled)
-            {
-                if (newConfig.Enabled)
-                {
-                    TShock.Utils.Broadcast(
-                        $"Class forcing is enabled!\nAll players are now required to use a weapon for their class.",
-                        Color.AliceBlue
-                    );
-                }
-                else
-                {
-                    TShock.Utils.Broadcast(
-                        $"Class forcing is disabled!\nAll players are now free to use any weapon.",
-                        Color.AliceBlue
-                    );
-                }
-            }
-            if (Config.SameAll != newConfig.SameAll)
-            {
-                if (newConfig.SameAll)
-                {
-                    TShock.Utils.Broadcast(
-                        $"All players are now forced to be a {newConfig.ClassAll.ToUpper()} class!",
-                        Color.AliceBlue
-                    );
-                }
-                else
-                {
-                    TShock.Utils.Broadcast(
-                        $"All players are now on their own class!",
-                        Color.AliceBlue
-                    );
-                }
-            }
-            Config = newConfig;
-        }
-
-        private void OnPlayerLogin(PlayerPostLoginEventArgs e)
-        {
-            TSPlayer player = e.Player;
-
-            using QueryResult result = TShock.DB.QueryReader(
-                $@"
-                    SELECT Username, Class FROM PlayerClass
-                    WHERE Username=@0 AND World=@1;
-                ",
-                player.Account.Name,
-                Main.worldID
-            );
-            if (!result.Read())
-            {
-                TShock.DB.Query(
-                    $@"
-                        INSERT INTO PlayerClass (World, Username)
-                        VALUES (@0, @1);
-                    ",
-                    Main.worldID,
-                    player.Account.Name
-                );
-                TShock.Log.ConsoleInfo(
-                    $"[ForceClass] New DB row for {player.Account.Name} created."
-                );
-                PlayerClasses[player.Name] = "None";
-                return;
-            }
-
-            string playerclass = result.Reader.Get<string>("Class");
-            PlayerClasses[player.Name] = playerclass;
         }
 
         private void ChooseClass(CommandArgs args)
@@ -409,6 +404,7 @@ namespace ForceClass
             }
         }
 
+        // Utility
         private void SendMessage(TSPlayer player, string message, Color color)
         {
             if (
