@@ -139,7 +139,7 @@ namespace ForceClass
                 //     null,
                 //     projectileId
                 // );
-                player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
+                player.SendData(PacketTypes.ProjectileDestroy, "", projectileId, ownerId);
                 args.Handled = true;
             }
             // For Debugging
