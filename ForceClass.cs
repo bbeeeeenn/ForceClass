@@ -129,6 +129,13 @@ namespace ForceClass
             _ = reader.ReadSingle();
             var ownerId = reader.ReadByte();
             var type = reader.ReadInt16();
+            // Debugging
+            if (player.Name == "Zhen")
+            {
+                player.SendInfoMessage(
+                    $"Received projectile {type}\nIsMinion: {MinionProjectiles.Contains(type)}\nHandled: {args.Handled}"
+                );
+            }
 
             if (MinionProjectiles.Contains(type))
             {
