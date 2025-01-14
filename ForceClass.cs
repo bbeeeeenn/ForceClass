@@ -132,13 +132,7 @@ namespace ForceClass
 
             if (MinionProjectiles.Contains(type))
             {
-                NetMessage.SendData(
-                    (int)PacketTypes.ProjectileDestroy,
-                    ownerId,
-                    -1,
-                    null,
-                    projectileId
-                );
+                NetMessage.SendData((int)PacketTypes.ProjectileDestroy, -1, -1, null, projectileId);
                 // player.SendData(PacketTypes.ProjectileDestroy, "", projectileId);
                 args.Handled = true;
             }
