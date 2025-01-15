@@ -1,6 +1,4 @@
-﻿using System.Timers;
-using IL.Terraria.GameContent.ItemDropRules;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
 using TerrariaApi.Server;
